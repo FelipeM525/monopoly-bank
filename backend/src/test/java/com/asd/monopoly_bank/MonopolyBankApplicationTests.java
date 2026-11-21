@@ -1,10 +1,8 @@
 package com.asd.monopoly_bank;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class MonopolyBankApplicationTests {
+class MonopolyBankApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {
