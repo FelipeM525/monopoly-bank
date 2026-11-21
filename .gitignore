@@ -1,0 +1,49 @@
+# Root-level ignores shared by the whole monorepo.
+# backend/ and frontend/ keep their own tool-specific .gitignore files.
+
+### Environment & secrets ###
+.env
+.env.*
+!.env.example
+
+### OS ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Editors / IDEs ###
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+### Logs ###
+*.log
+logs/
+
+### Java / Maven (backend) ###
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+### Node / Vite (frontend) ###
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.vite/
+.eslintcache
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### Local Docker overrides ###
+docker-compose.override.yml
+docker-compose.override.yaml
