@@ -1,3 +1,6 @@
+server:
+  port: ${SERVER_PORT:8080}
+
 spring:
   application:
     name: monopoly-bank
@@ -11,3 +14,19 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+game:
+  rules:
+    starting-balance-cents: ${GAME_STARTING_BALANCE_CENTS:150000}
+    salary-cents: ${GAME_SALARY_CENTS:20000}
+    min-players: ${GAME_MIN_PLAYERS:2}
+    max-players: ${GAME_MAX_PLAYERS:6}
+    bank:
+      initial-cash-cents: ${GAME_BANK_INITIAL_CASH_CENTS:2000000}
+      unlimited: ${GAME_BANK_UNLIMITED:false}
+    reasons:
+      - Purchase
+      - Rent
+      - Tax
+      - Salary
+      - Other
