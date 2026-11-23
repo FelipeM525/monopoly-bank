@@ -1,6 +1,7 @@
 package com.asd.monopoly_bank.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -408,6 +409,87 @@ class TransactionControllerIntegrationTest extends AbstractIntegrationTest {
 		assertThat(accountRepository.findById(bruno.getId()).orElseThrow().getBalanceCents())
 				.isEqualTo(185_000L);
 		assertThat(transactionRepository.countByGameId(game.getId())).isEqualTo(2);
+	}
+
+	@Test
+	void listsTransactionHistoryNewestFirstWithOptionalAccountFilterAndPagination() throws Exception {
+		Account carla = accountRepository.save(Account.createPlayer(game, "Carla", PawnColor.GREEN, 150_000L));
+
+		// Record 3 transfers in chronological order
+		transactionService.transfer(
+				game.getId(),
+				new CreateTransactionRequest(bank.getId(), ana.getId(), 20_000L, "Salary"),
+				UUID.randomUUID());
+		transactionService.transfer(
+				game.getId(),
+				new CreateTransactionRequest(ana.getId(), bruno.getId(), 15_000L, "Rent"),
+				UUID.randomUUID());
+		transactionService.transfer(
+				game.getId(),
+				new CreateTransactionRequest(bruno.getId(), carla.getId(), 10_000L, "Purchase"),
+				UUID.randomUUID());
+
+		// 1. Unfiltered history returns all 3 newest-first
+		mockMvc.perform(get("/api/games/{gameId}/transactions", game.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalElements").value(3))
+				.andExpect(jsonPath("$.totalPages").value(1))
+				.andExpect(jsonPath("$.hasNext").value(false))
+				.andExpect(jsonPath("$.items.length()").value(3))
+				.andExpect(jsonPath("$.items[0].reason").value("Purchase"))
+				.andExpect(jsonPath("$.items[0].fromAccount.name").value("Bruno"))
+				.andExpect(jsonPath("$.items[0].toAccount.name").value("Carla"))
+				.andExpect(jsonPath("$.items[1].reason").value("Rent"))
+				.andExpect(jsonPath("$.items[2].reason").value("Salary"));
+
+		// 2. Filtered by Ana returns only transactions where Ana was payer or receiver (Rent, Salary)
+		mockMvc.perform(get("/api/games/{gameId}/transactions", game.getId())
+						.param("accountId", ana.getId().toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalElements").value(2))
+				.andExpect(jsonPath("$.items.length()").value(2))
+				.andExpect(jsonPath("$.items[0].reason").value("Rent"))
+				.andExpect(jsonPath("$.items[1].reason").value("Salary"));
+
+		// 3. Pagination (page=0, size=1) on Ana's history
+		mockMvc.perform(get("/api/games/{gameId}/transactions", game.getId())
+						.param("accountId", ana.getId().toString())
+						.param("page", "0")
+						.param("size", "1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.page").value(0))
+				.andExpect(jsonPath("$.size").value(1))
+				.andExpect(jsonPath("$.totalElements").value(2))
+				.andExpect(jsonPath("$.totalPages").value(2))
+				.andExpect(jsonPath("$.hasNext").value(true))
+				.andExpect(jsonPath("$.items.length()").value(1))
+				.andExpect(jsonPath("$.items[0].reason").value("Rent"));
+	}
+
+	@Test
+	void rejectsHistoryRequestsForUnknownGameForeignAccountOrInvalidPageParams() throws Exception {
+		mockMvc.perform(get("/api/games/{gameId}/transactions", 999_999L))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.status").value(404));
+
+		Game otherGame = gameRepository.save(new Game("Other Game"));
+		Account otherPlayer = accountRepository.save(
+				Account.createPlayer(otherGame, "Other", PawnColor.GREEN, 150_000L));
+
+		mockMvc.perform(get("/api/games/{gameId}/transactions", game.getId())
+						.param("accountId", otherPlayer.getId().toString()))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.status").value(422));
+
+		mockMvc.perform(get("/api/games/{gameId}/transactions", game.getId())
+						.param("page", "-1"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400));
+
+		mockMvc.perform(get("/api/games/{gameId}/transactions", game.getId())
+						.param("size", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400));
 	}
 
 	private long totalMoneyInGame(Long gameId) {

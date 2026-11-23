@@ -2,6 +2,7 @@ package com.asd.monopoly_bank.service;
 
 import com.asd.monopoly_bank.config.GameRulesProperties;
 import com.asd.monopoly_bank.dto.CreateTransactionRequest;
+import com.asd.monopoly_bank.dto.PagedResponse;
 import com.asd.monopoly_bank.dto.TransactionResponse;
 import com.asd.monopoly_bank.exception.InvalidTransferException;
 import com.asd.monopoly_bank.exception.ResourceNotFoundException;
@@ -14,18 +15,25 @@ import com.asd.monopoly_bank.repository.TransactionRepository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class TransactionService {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final GameRepository gameRepository;
     private final AccountRepository accountRepository;
@@ -61,6 +69,53 @@ public class TransactionService {
         return transactionRepository.findByIdempotencyKey(idempotencyKey)
                 .map(existing -> toReplayedResult(existing, gameId, request))
                 .orElseGet(() -> executeWithRaceRecovery(gameId, request, idempotencyKey));
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<TransactionResponse> listTransactions(
+            Long gameId,
+            Long accountId,
+            int page,
+            int size) {
+        findGameOrThrow(gameId);
+        validateOptionalFilterAccount(gameId, accountId);
+
+        Pageable pageable = createPageable(page, size);
+        Page<Transaction> txPage = transactionRepository
+                .findLedgerByGameIdAndOptionalAccountId(gameId, accountId, pageable);
+
+        Set<Long> reversedIds = findReversedIdsOnPage(txPage.getContent());
+        return PagedResponse.from(
+                txPage,
+                tx -> TransactionResponse.from(tx, reversedIds.contains(tx.getId())));
+    }
+
+    private void validateOptionalFilterAccount(Long gameId, Long accountId) {
+        if (accountId == null) {
+            return;
+        }
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> ResourceNotFoundException.account(accountId));
+        resolveGameAccount(account, accountId, gameId);
+    }
+
+    private static Pageable createPageable(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("Page index must not be negative.");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException(
+                    "Page size must be between 1 and " + MAX_PAGE_SIZE + ".");
+        }
+        return PageRequest.of(page, size);
+    }
+
+    private Set<Long> findReversedIdsOnPage(List<Transaction> transactions) {
+        if (transactions.isEmpty()) {
+            return Set.of();
+        }
+        List<Long> ids = transactions.stream().map(Transaction::getId).toList();
+        return transactionRepository.findReversedTransactionIds(ids);
     }
 
     private TransferResult executeWithRaceRecovery(

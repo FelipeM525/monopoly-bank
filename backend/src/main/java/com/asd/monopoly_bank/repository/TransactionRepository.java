@@ -1,8 +1,10 @@
 package com.asd.monopoly_bank.repository;
 
 import com.asd.monopoly_bank.model.Transaction;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +53,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 	List<Transaction> findAllByGameIdOrderByCreatedAtAscIdAsc(@Param("gameId") Long gameId);
 
 	boolean existsByReversalOfId(Long transactionId);
+
+	@Query("""
+			SELECT t.reversalOf.id FROM Transaction t
+			WHERE t.reversalOf.id IN :transactionIds
+			""")
+	Set<Long> findReversedTransactionIds(@Param("transactionIds") Collection<Long> transactionIds);
 
 	long countByGameId(Long gameId);
 }

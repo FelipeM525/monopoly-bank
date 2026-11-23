@@ -16,6 +16,7 @@ public record TransactionResponse(
 		String reason,
 		UUID idempotencyKey,
 		Long reversalOfTransactionId,
+		boolean reversed,
 		Instant createdAt) {
 
 	public record AccountParticipant(
@@ -36,6 +37,10 @@ public record TransactionResponse(
 	}
 
 	public static TransactionResponse from(Transaction tx) {
+		return from(tx, false);
+	}
+
+	public static TransactionResponse from(Transaction tx, boolean reversed) {
 		return new TransactionResponse(
 				tx.getId(),
 				tx.getGame().getId(),
@@ -45,6 +50,7 @@ public record TransactionResponse(
 				tx.getReason(),
 				tx.getIdempotencyKey(),
 				tx.getReversalOf() != null ? tx.getReversalOf().getId() : null,
+				reversed,
 				tx.getCreatedAt());
 	}
 }
