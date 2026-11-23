@@ -101,13 +101,14 @@ class RepositoryIntegrationTest extends AbstractIntegrationTest {
 
 	private Transaction saveTransaction(
 			Game game, Account from, Account to, long amountCents, String reason, UUID idempotencyKey) {
-		Transaction tx = new Transaction();
-		tx.setGame(game);
-		tx.setFromAccount(from);
-		tx.setToAccount(to);
-		tx.setAmountCents(amountCents);
-		tx.setReason(reason);
-		tx.setIdempotencyKey(idempotencyKey);
+		Transaction tx = Transaction.builder()
+				.game(game)
+				.fromAccount(from)
+				.toAccount(to)
+				.amountCents(amountCents)
+				.reason(reason)
+				.idempotencyKey(idempotencyKey)
+				.build();
 		return transactionRepository.save(tx);
 	}
 }
