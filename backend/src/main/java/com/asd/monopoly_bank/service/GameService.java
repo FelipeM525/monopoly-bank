@@ -4,6 +4,8 @@ import com.asd.monopoly_bank.config.GameRulesProperties;
 import com.asd.monopoly_bank.dto.AccountResponse;
 import com.asd.monopoly_bank.dto.CreateGameRequest;
 import com.asd.monopoly_bank.dto.CreateGameRequest.PlayerSetupRequest;
+import com.asd.monopoly_bank.dto.GameAuditResponse;
+import com.asd.monopoly_bank.dto.GameAuditResponse.AccountAuditEntry;
 import com.asd.monopoly_bank.dto.GameResponse;
 import com.asd.monopoly_bank.dto.GameSummaryResponse;
 import com.asd.monopoly_bank.exception.DuplicatePlayerException;
@@ -12,13 +14,16 @@ import com.asd.monopoly_bank.model.Account;
 import com.asd.monopoly_bank.model.AccountType;
 import com.asd.monopoly_bank.model.Game;
 import com.asd.monopoly_bank.model.PawnColor;
+import com.asd.monopoly_bank.model.Transaction;
 import com.asd.monopoly_bank.repository.AccountRepository;
 import com.asd.monopoly_bank.repository.GameRepository;
 import com.asd.monopoly_bank.repository.TransactionRepository;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -98,6 +103,60 @@ public class GameService {
 					return GameSummaryResponse.from(game, playerCount, txCount);
 				})
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public GameAuditResponse auditGame(Long gameId) {
+		if (!gameRepository.existsById(gameId)) {
+			throw ResourceNotFoundException.game(gameId);
+		}
+
+		List<Account> accounts = accountRepository.findByGameIdOrderByIdAsc(gameId);
+		List<Transaction> transactions = transactionRepository
+				.findAllByGameIdOrderByCreatedAtAscIdAsc(gameId);
+
+		List<AccountAuditEntry> entries = buildAccountAuditEntries(accounts, transactions);
+		return buildGameAuditResponse(gameId, entries, transactions.size());
+	}
+
+	private List<AccountAuditEntry> buildAccountAuditEntries(
+			List<Account> accounts,
+			List<Transaction> transactions) {
+		Map<Long, Long> creditsByAccount = new HashMap<>();
+		Map<Long, Long> debitsByAccount = new HashMap<>();
+
+		transactions.forEach(tx -> {
+			debitsByAccount.merge(tx.getFromAccount().getId(), tx.getAmountCents(), Math::addExact);
+			creditsByAccount.merge(tx.getToAccount().getId(), tx.getAmountCents(), Math::addExact);
+		});
+
+		return accounts.stream()
+				.map(account -> AccountAuditEntry.from(
+						account,
+						creditsByAccount.getOrDefault(account.getId(), 0L),
+						debitsByAccount.getOrDefault(account.getId(), 0L)))
+				.toList();
+	}
+
+	private GameAuditResponse buildGameAuditResponse(
+			Long gameId,
+			List<AccountAuditEntry> entries,
+			long transactionCount) {
+		long initialTotal = entries.stream().mapToLong(AccountAuditEntry::initialBalanceCents).sum();
+		long currentTotal = entries.stream().mapToLong(AccountAuditEntry::storedBalanceCents).sum();
+		long rebuiltTotal = entries.stream().mapToLong(AccountAuditEntry::rebuiltBalanceCents).sum();
+
+		boolean allAccountsConsistent = entries.stream().allMatch(AccountAuditEntry::consistent);
+		boolean totalMoneyPreserved = initialTotal == currentTotal && currentTotal == rebuiltTotal;
+
+		return new GameAuditResponse(
+				gameId,
+				allAccountsConsistent && totalMoneyPreserved,
+				initialTotal,
+				currentTotal,
+				rebuiltTotal,
+				transactionCount,
+				entries);
 	}
 
 	private void validatePlayerCount(int count) {
