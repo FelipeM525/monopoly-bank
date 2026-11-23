@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.asd.monopoly_bank.dto.CreateGameRequest;
+import com.asd.monopoly_bank.dto.GameAuditResponse;
 import com.asd.monopoly_bank.dto.GameResponse;
 import com.asd.monopoly_bank.dto.GameSummaryResponse;
 import com.asd.monopoly_bank.service.GameService;
@@ -41,5 +42,10 @@ public class GameController {
 	@GetMapping("/{id}")
 	public ResponseEntity<GameResponse> getGame(@PathVariable Long id) {
 		return ResponseEntity.ok(gameService.getGame(id));
+	}
+
+	@GetMapping("/{id}/audit")
+	public ResponseEntity<GameAuditResponse> auditGame(@PathVariable Long id) {
+		return ResponseEntity.ok(gameService.auditGame(id));
 	}
 }
