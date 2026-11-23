@@ -7,6 +7,7 @@ import com.asd.monopoly_bank.dto.CreateGameRequest.PlayerSetupRequest;
 import com.asd.monopoly_bank.dto.GameResponse;
 import com.asd.monopoly_bank.dto.GameSummaryResponse;
 import com.asd.monopoly_bank.exception.DuplicatePlayerException;
+import com.asd.monopoly_bank.exception.ResourceNotFoundException;
 import com.asd.monopoly_bank.model.Account;
 import com.asd.monopoly_bank.model.AccountType;
 import com.asd.monopoly_bank.model.Game;
@@ -61,6 +62,28 @@ public class GameService {
 				.toList();
 
 		return GameResponse.from(game, AccountResponse.from(bank), players, 0L);
+	}
+
+	@Transactional(readOnly = true)
+	public GameResponse getGame(Long gameId) {
+		Game game = gameRepository.findById(gameId)
+				.orElseThrow(() -> ResourceNotFoundException.game(gameId));
+
+		List<Account> accounts = accountRepository.findByGameIdOrderByIdAsc(gameId);
+
+		AccountResponse bank = accounts.stream()
+				.filter(a -> a.getType() == AccountType.BANK)
+				.findFirst()
+				.map(AccountResponse::from)
+				.orElseThrow(() -> new IllegalStateException("Bank account missing for game #" + gameId));
+
+		List<AccountResponse> players = accounts.stream()
+				.filter(a -> a.getType() == AccountType.PLAYER)
+				.map(AccountResponse::from)
+				.toList();
+
+		long txCount = transactionRepository.countByGameId(gameId);
+		return GameResponse.from(game, bank, players, txCount);
 	}
 
 	@Transactional(readOnly = true)
