@@ -222,4 +222,44 @@ class GameControllerIntegrationTest extends AbstractIntegrationTest {
 
 		assertThat(gameRepository.count()).isZero();
 	}
+
+	@Test
+	void getsGameDashboardByIdAndReturns404WhenNotFound() throws Exception {
+		mockMvc.perform(post("/api/games")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "name": "Dashboard Table",
+								  "players": [
+								    { "name": "Ana", "color": "RED", "startingBalanceCents": 150000 },
+								    { "name": "Bruno", "color": "BLUE", "startingBalanceCents": 180000 }
+								  ]
+								}
+								"""))
+				.andExpect(status().isCreated());
+
+		Long gameId = gameRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(get("/api/games/{id}", gameId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(gameId))
+				.andExpect(jsonPath("$.name").value("Dashboard Table"))
+				.andExpect(jsonPath("$.bank.type").value("BANK"))
+				.andExpect(jsonPath("$.bank.balanceCents").value(2_000_000))
+				.andExpect(jsonPath("$.players.length()").value(2))
+				.andExpect(jsonPath("$.players[0].name").value("Ana"))
+				.andExpect(jsonPath("$.players[0].color").value("RED"))
+				.andExpect(jsonPath("$.players[0].balanceCents").value(150_000))
+				.andExpect(jsonPath("$.players[1].name").value("Bruno"))
+				.andExpect(jsonPath("$.players[1].color").value("BLUE"))
+				.andExpect(jsonPath("$.players[1].balanceCents").value(180_000))
+				.andExpect(jsonPath("$.totalMoneyCents").value(2_330_000))
+				.andExpect(jsonPath("$.transactionCount").value(0));
+
+		mockMvc.perform(get("/api/games/{id}", 999_999L))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.title").value("Resource Not Found"))
+				.andExpect(jsonPath("$.detail").value("Game #999999 was not found."));
+	}
 }
