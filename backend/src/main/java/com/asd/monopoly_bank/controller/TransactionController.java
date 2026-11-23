@@ -3,6 +3,7 @@ package com.asd.monopoly_bank.controller;
 import com.asd.monopoly_bank.dto.CreateTransactionRequest;
 import com.asd.monopoly_bank.dto.TransactionResponse;
 import com.asd.monopoly_bank.service.TransactionService;
+import com.asd.monopoly_bank.service.TransactionService.TransferResult;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +26,10 @@ public class TransactionController {
 	@PostMapping
 	public ResponseEntity<TransactionResponse> createTransaction(
 			@PathVariable Long gameId,
-			@RequestHeader(value = "Idempotency-Key", required = false) UUID idempotencyKey,
+			@RequestHeader("Idempotency-Key") UUID idempotencyKey,
 			@Valid @RequestBody CreateTransactionRequest request) {
-		TransactionResponse response = transactionService.transfer(gameId, request, idempotencyKey);
-		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+		TransferResult result = transactionService.transfer(gameId, request, idempotencyKey);
+		HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+		return ResponseEntity.status(status).body(result.transaction());
 	}
 }
