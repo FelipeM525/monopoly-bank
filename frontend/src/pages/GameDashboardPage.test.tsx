@@ -70,6 +70,14 @@ function renderDashboard(route = '/games/12') {
 describe('GameDashboardPage (R2)', () => {
   beforeEach(() => {
     vi.spyOn(apiClient, 'getConfig').mockResolvedValue(MOCK_CONFIG);
+    vi.spyOn(apiClient, 'listTransactions').mockResolvedValue({
+      items: [],
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+      hasNext: false,
+    });
     localStorage.clear();
   });
 
@@ -243,5 +251,118 @@ describe('GameDashboardPage (R2)', () => {
     });
     const thirdKey = transferSpy.mock.calls[2][2];
     expect(thirdKey).not.toBe(firstKey);
+  });
+
+  it('displays transaction history newest-first and filters by selected player (R4)', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(apiClient, 'getGame').mockResolvedValue(MOCK_GAME);
+
+    const allTransactions: TransactionDto[] = [
+      {
+        id: 102,
+        gameId: 12,
+        fromAccount: {
+          id: 3,
+          type: 'PLAYER',
+          name: 'Bruno',
+          color: 'BLUE',
+          balanceCents: 135_000,
+        },
+        toAccount: {
+          id: 2,
+          type: 'PLAYER',
+          name: 'Ana',
+          color: 'RED',
+          balanceCents: 185_000,
+        },
+        amountCents: 15_000,
+        reason: 'Rent',
+        idempotencyKey: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        reversalOfTransactionId: null,
+        reversed: false,
+        createdAt: '2026-11-24T12:10:00Z',
+      },
+      {
+        id: 101,
+        gameId: 12,
+        fromAccount: {
+          id: 1,
+          type: 'BANK',
+          name: 'Bank',
+          color: null,
+          balanceCents: 1_980_000,
+        },
+        toAccount: {
+          id: 2,
+          type: 'PLAYER',
+          name: 'Ana',
+          color: 'RED',
+          balanceCents: 170_000,
+        },
+        amountCents: 20_000,
+        reason: 'Salary',
+        idempotencyKey: '11111111-2222-3333-4444-555555555555',
+        reversalOfTransactionId: null,
+        reversed: false,
+        createdAt: '2026-11-24T12:01:00Z',
+      },
+    ];
+
+    const listSpy = vi
+      .spyOn(apiClient, 'listTransactions')
+      .mockImplementation(async (_gameId, params) => {
+        if (params?.accountId === 3) {
+          return {
+            items: [allTransactions[0]],
+            page: 0,
+            size: 10,
+            totalElements: 1,
+            totalPages: 1,
+            hasNext: false,
+          };
+        }
+        return {
+          items: allTransactions,
+          page: 0,
+          size: 10,
+          totalElements: 2,
+          totalPages: 1,
+          hasNext: false,
+        };
+      });
+
+    renderDashboard('/games/12');
+    await screen.findByRole('heading', { name: 'Friday Night Session' });
+
+    const historyCard = screen.getByTestId('transaction-history-card');
+    expect(
+      await within(historyCard).findByTestId('transaction-row-102'),
+    ).toBeInTheDocument();
+    expect(
+      within(historyCard).getByTestId('transaction-row-101'),
+    ).toBeInTheDocument();
+    expect(within(historyCard).getByText('R$ 150,00')).toBeInTheDocument();
+    expect(within(historyCard).getByText('R$ 200,00')).toBeInTheDocument();
+
+    // Filter by Bruno (id = 3)
+    await user.selectOptions(
+      screen.getByLabelText(/Filter by player/i),
+      '3',
+    );
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledWith(12, {
+        accountId: 3,
+        page: 0,
+        size: 10,
+      });
+    });
+
+    expect(
+      await within(historyCard).findByText('-R$ 150,00'),
+    ).toBeInTheDocument();
+    expect(
+      within(historyCard).queryByTestId('transaction-row-101'),
+    ).not.toBeInTheDocument();
   });
 });
