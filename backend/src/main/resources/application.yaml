@@ -15,6 +15,12 @@ spring:
   flyway:
     enabled: true
 
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+
 game:
   rules:
     starting-balance-cents: ${GAME_STARTING_BALANCE_CENTS:150000}
