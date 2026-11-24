@@ -37,6 +37,14 @@ function renderNewGameScreen() {
 describe('NewGamePage (R1)', () => {
   beforeEach(() => {
     vi.spyOn(apiClient, 'getConfig').mockResolvedValue(MOCK_CONFIG);
+    vi.spyOn(apiClient, 'listTransactions').mockResolvedValue({
+      items: [],
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+      hasNext: false,
+    });
     localStorage.clear();
   });
 

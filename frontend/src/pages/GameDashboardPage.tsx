@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { ApiError, apiClient } from '@/api/client';
+import { TransactionHistoryCard } from '@/components/TransactionHistoryCard';
 import { TransferFormCard } from '@/components/TransferFormCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -121,7 +122,10 @@ export function GameDashboardPage() {
 
       <PlayerBalancesSection players={game.players} />
 
-      <TransferFormCard game={game} reasons={config?.reasons} />
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <TransferFormCard game={game} reasons={config?.reasons} />
+        <TransactionHistoryCard game={game} />
+      </div>
     </div>
   );
 }
