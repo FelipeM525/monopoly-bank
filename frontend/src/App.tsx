@@ -1,4 +1,4 @@
-import { Link, Route, Routes, useParams } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { GameDashboardPage } from '@/pages/GameDashboardPage';
 import { NewGamePage } from '@/pages/NewGamePage';
 
 function HomePage() {
@@ -30,27 +31,13 @@ function HomePage() {
   );
 }
 
-function GameDashboardPlaceholderPage() {
-  const { id } = useParams<{ id: string }>();
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">Game #{id} Dashboard</CardTitle>
-        <CardDescription>
-          Balances, transfers, and transaction history.
-        </CardDescription>
-      </CardHeader>
-    </Card>
-  );
-}
-
 export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/games/new" element={<NewGamePage />} />
-        <Route path="/games/:id" element={<GameDashboardPlaceholderPage />} />
+        <Route path="/games/:id" element={<GameDashboardPage />} />
       </Route>
     </Routes>
   );
