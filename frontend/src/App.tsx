@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { NewGamePage } from '@/pages/NewGamePage';
 
 function HomePage() {
   return (
@@ -25,19 +26,6 @@ function HomePage() {
           <Link to="/games/new">Start a New Game</Link>
         </Button>
       </CardContent>
-    </Card>
-  );
-}
-
-function NewGamePlaceholderPage() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">New Game Setup</CardTitle>
-        <CardDescription>
-          Configure 2 to 6 players and starting balances.
-        </CardDescription>
-      </CardHeader>
     </Card>
   );
 }
@@ -61,7 +49,7 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/games/new" element={<NewGamePlaceholderPage />} />
+        <Route path="/games/new" element={<NewGamePage />} />
         <Route path="/games/:id" element={<GameDashboardPlaceholderPage />} />
       </Route>
     </Routes>
