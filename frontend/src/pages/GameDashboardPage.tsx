@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { ApiError, apiClient } from '@/api/client';
+import { TransferFormCard } from '@/components/TransferFormCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,8 @@ export function GameDashboardPage() {
       <BankAndTotalSummary game={game} config={config} />
 
       <PlayerBalancesSection players={game.players} />
+
+      <TransferFormCard game={game} reasons={config?.reasons} />
     </div>
   );
 }
