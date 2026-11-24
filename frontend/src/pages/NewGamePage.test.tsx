@@ -137,6 +137,7 @@ describe('NewGamePage (R1)', () => {
     const createSpy = vi
       .spyOn(apiClient, 'createGame')
       .mockResolvedValue(createdGame);
+    vi.spyOn(apiClient, 'getGame').mockResolvedValue(createdGame);
 
     renderNewGameScreen();
 
@@ -166,7 +167,7 @@ describe('NewGamePage (R1)', () => {
     });
 
     expect(
-      await screen.findByRole('heading', { name: /Game #77 Dashboard/i }),
+      await screen.findByRole('heading', { name: 'Friday Night' }),
     ).toBeInTheDocument();
   });
 
