@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { ExportHistoryButtons } from '@/components/ExportHistoryButtons';
 import { cn } from '@/lib/utils';
 import type {
   AccountParticipantDto,
@@ -84,6 +85,8 @@ export function TransactionHistoryCard({ game }: TransactionHistoryCardProps) {
               Every transfer recorded newest-first.
             </CardDescription>
           </div>
+
+          <ExportHistoryButtons gameId={game.id} />
 
           <div className="flex items-center gap-2">
             <Label htmlFor="history-player-filter" className="text-xs">

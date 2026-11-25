@@ -61,6 +61,8 @@ async function parseApiError(response: Response): Promise<ApiError> {
   }
 }
 
+export type ExportFormat = 'csv' | 'json';
+
 export const apiClient = {
   getConfig(): Promise<GameConfig> {
     return requestJson<GameConfig>('/api/config');
@@ -116,5 +118,21 @@ export const apiClient = {
     const queryString = query.toString();
     const url = `/api/games/${gameId}/transactions${queryString ? `?${queryString}` : ''}`;
     return requestJson<PagedResponse<TransactionDto>>(url);
+  },
+
+  async downloadTransactionsExport(
+    gameId: number,
+    format: ExportFormat,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await fetch(
+      `/api/games/${gameId}/transactions/export?format=${format}`,
+    );
+    if (!response.ok) {
+      throw await parseApiError(response);
+    }
+    return {
+      blob: await response.blob(),
+      filename: `game-${gameId}-transactions.${format}`,
+    };
   },
 };
