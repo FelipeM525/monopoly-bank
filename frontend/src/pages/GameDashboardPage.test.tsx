@@ -365,4 +365,43 @@ describe('GameDashboardPage (R2)', () => {
       within(historyCard).queryByTestId('transaction-row-101'),
     ).not.toBeInTheDocument();
   });
+
+  it('supports additive quick amount buttons, Salary reason tag prefill, and live post-transaction balance preview (#23)', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(apiClient, 'getGame').mockResolvedValue(MOCK_GAME);
+
+    renderDashboard('/games/12');
+    await screen.findByRole('heading', { name: 'Friday Night Session' });
+
+    // Click +50 and +200 -> additive amount becomes 250,00
+    await user.click(screen.getByTestId('quick-amount-50'));
+    await user.click(screen.getByTestId('quick-amount-200'));
+    expect(screen.getByLabelText(/Amount \(R\$\)/i)).toHaveValue('250,00');
+
+    // Live balance preview shows Ana (1.850,00 -> 1.600,00) and Bank (19.800,00 -> 20.050,00)
+    const preview = screen.getByTestId('live-balance-preview');
+    expect(within(preview).getByText(/Ana After/i)).toBeInTheDocument();
+    expect(within(preview).getByText('R$ 1.600,00')).toBeInTheDocument();
+    expect(within(preview).getByText('R$ 20.050,00')).toBeInTheDocument();
+
+    // Clicking the Salary tag switches direction to Bank -> Ana and prefills salaryCents (200,00)
+    await user.click(screen.getByTestId('reason-tag-Salary'));
+    expect(screen.getByLabelText(/From \(Payer\)/i)).toHaveValue('1');
+    expect(screen.getByLabelText(/To \(Receiver\)/i)).toHaveValue('2');
+    expect(screen.getByLabelText(/Amount \(R\$\)/i)).toHaveValue('200,00');
+    expect(within(preview).getByText('R$ 2.050,00')).toBeInTheDocument();
+
+    // Entering an amount greater than payer's balance highlights insufficient funds in the preview
+    await user.selectOptions(screen.getByLabelText(/From \(Payer\)/i), '3'); // Bruno (1.350,00)
+    await user.selectOptions(screen.getByLabelText(/To \(Receiver\)/i), '2'); // Ana
+    const amountInput = screen.getByLabelText(/Amount \(R\$\)/i);
+    await user.clear(amountInput);
+    await user.type(amountInput, '2000,00');
+
+    expect(
+      within(screen.getByTestId('live-balance-preview')).getByText(
+        /Insufficient funds: Bruno is short by R\$ 650,00\./i,
+      ),
+    ).toBeInTheDocument();
+  });
 });
