@@ -26,6 +26,7 @@ describe('App routing & shell', () => {
   });
 
   it('renders the home route at /', () => {
+    vi.spyOn(apiClient, 'listGames').mockResolvedValue([]);
     renderAtRoute('/');
     expect(
       screen.getByRole('heading', { name: /The Bank of Banco Imobiliário/i }),
