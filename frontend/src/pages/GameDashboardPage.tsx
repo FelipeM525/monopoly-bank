@@ -123,7 +123,7 @@ export function GameDashboardPage() {
       <PlayerBalancesSection players={game.players} />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <TransferFormCard game={game} reasons={config?.reasons} />
+        <TransferFormCard game={game} config={config} />
         <TransactionHistoryCard game={game} />
       </div>
     </div>
