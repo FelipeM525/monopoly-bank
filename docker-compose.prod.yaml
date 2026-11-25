@@ -1,0 +1,38 @@
+# =============================================================================
+# Production Docker Compose for AWS EC2 + Amazon RDS (PostgreSQL 16)
+# - Runs stateless backend (Spring Boot) and frontend (Nginx) containers on EC2
+# - Connects backend to Amazon RDS PostgreSQL via SPRING_DATASOURCE_URL
+# - Does NOT expose port 8080 or 5432 publicly; only Nginx port 80 is published
+# =============================================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+    expose:
+      - "8080"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required (e.g. jdbc:postgresql://<rds-endpoint>:5432/monopoly)}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}
+      GAME_STARTING_BALANCE_CENTS: ${GAME_STARTING_BALANCE_CENTS:-150000}
+      GAME_SALARY_CENTS: ${GAME_SALARY_CENTS:-20000}
+      GAME_BANK_INITIAL_CASH_CENTS: ${GAME_BANK_INITIAL_CASH_CENTS:-2000000}
+      GAME_BANK_UNLIMITED: ${GAME_BANK_UNLIMITED:-false}
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
